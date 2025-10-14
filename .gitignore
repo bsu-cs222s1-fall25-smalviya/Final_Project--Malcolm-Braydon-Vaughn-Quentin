@@ -41,5 +41,6 @@ bin/
 ### Mac OS ###
 .DS_Store
 
+# Always include src folder
 !src/
 !src/**/*
