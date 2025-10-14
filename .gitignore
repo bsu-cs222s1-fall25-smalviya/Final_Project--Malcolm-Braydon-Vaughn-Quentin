@@ -42,5 +42,12 @@ bin/
 .DS_Store
 
 # Always include src folder
+# Ensure these important directories are tracked
 !src/
 !src/**/*
+!gradle/
+!gradle/**/*
+!.gradle/
+!.gradle/**/*
+!.idea/
+!.idea/**/*
