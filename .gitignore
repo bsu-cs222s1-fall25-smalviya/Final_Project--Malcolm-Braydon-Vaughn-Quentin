@@ -41,8 +41,7 @@ bin/
 ### Mac OS ###
 .DS_Store
 
-# Always include src folder
-# Ensure these important directories are tracked
+# Always include these
 !src/
 !src/**/*
 !gradle/
