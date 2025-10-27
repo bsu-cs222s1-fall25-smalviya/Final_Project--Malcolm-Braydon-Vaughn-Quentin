@@ -1,20 +1,24 @@
 plugins {
-    id("java")
+    java
+    application
 }
 
-group = "org.example"
-version = "1.0-SNAPSHOT"
+repositories { mavenCentral() }
 
-repositories {
-    mavenCentral()
+java {
+    toolchain { languageVersion.set(JavaLanguageVersion.of(23)) }
 }
 
-dependencies {
-    testImplementation(platform("org.junit:junit-bom:5.10.0"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+tasks.withType<JavaCompile> {
+    options.encoding = "UTF-8"
+    options.compilerArgs.addAll(listOf("-Xlint:all"))
 }
 
-tasks.test {
-    useJUnitPlatform()
+application {
+    mainClass.set("bsu.edu.cs222.FinanceApp")
+}
+
+// <<< attach stdin so Scanner.nextLine() works when using 'gradlew run'
+tasks.named<JavaExec>("run") {
+    standardInput = System.`in`
 }

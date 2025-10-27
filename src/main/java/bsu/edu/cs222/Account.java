@@ -1,9 +1,13 @@
 package bsu.edu.cs222;
 
 import java.io.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
 
 public class Account extends User {
+    private static final long serialVersionUID = 1L;
+
     private static final String FILE_NAME = "accounts.dat";
     private static List<Account> allAccounts = new ArrayList<>();
 
@@ -11,16 +15,7 @@ public class Account extends User {
         super(userName, password);
     }
 
-    // Create new account and save to file
-    public static Account createAccount(String userName, String password) {
-        Account account = new Account(userName, password);
-        allAccounts.add(account);
-        saveAccounts();
-        System.out.println("Account created successfully!");
-        return account;
-    }
-
-    // Load accounts from .dat file
+    // --- persistence ---
     @SuppressWarnings("unchecked")
     public static void loadAccounts() {
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(FILE_NAME))) {
@@ -30,10 +25,10 @@ public class Account extends User {
             allAccounts = new ArrayList<>();
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
+            allAccounts = new ArrayList<>();
         }
     }
 
-    // Save accounts to .dat file
     public static void saveAccounts() {
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(FILE_NAME))) {
             oos.writeObject(allAccounts);
@@ -42,7 +37,15 @@ public class Account extends User {
         }
     }
 
-    // Attempt login by checking all stored accounts
+    // --- account operations ---
+    public static Account createAccount(String userName, String password) {
+        Account account = new Account(userName, password);
+        allAccounts.add(account);
+        saveAccounts();
+        System.out.println("Account created successfully!");
+        return account;
+    }
+
     public static Account loginExisting(String userName, String password) {
         for (Account acc : allAccounts) {
             if (acc.login(userName, password)) {
@@ -54,7 +57,6 @@ public class Account extends User {
         return null;
     }
 
-    // Optional: Change password
     public void changePassword() {
         Scanner scanner = new Scanner(System.in);
         System.out.print("Enter new password: ");
@@ -64,37 +66,5 @@ public class Account extends User {
         System.out.println("Password changed successfully.");
     }
 
-    // Example of displaying account info
-    public String getReport() {
-        return "User: " + this.getUserName();
-    }
-
-    // Simple test main
-    public static void main(String[] args) {
-        loadAccounts();
-        Scanner input = new Scanner(System.in);
-
-        System.out.print("1) Login or 2) Create account? ");
-        int choice = input.nextInt();
-        input.nextLine(); // consume newline
-
-        System.out.print("Username: ");
-        String user = input.nextLine();
-        System.out.print("Password: ");
-        String pass = input.nextLine();
-
-        Account account = null;
-        if (choice == 1) {
-            account = loginExisting(user, pass);
-        } else if (choice == 2) {
-            account = createAccount(user, pass);
-        }
-
-        if (account != null) {
-            System.out.println("Account loaded: " + account.getReport());
-        }
-
-        saveAccounts();
-    }
+    public String getReport() { return "User: " + this.getUserName(); }
 }
-

@@ -50,3 +50,10 @@ bin/
 !.gradle/**/*
 !.idea/
 !.idea/**/*
+
+.gradle/
+build/
+out/
+*.iml
+.idea/
+*.class
