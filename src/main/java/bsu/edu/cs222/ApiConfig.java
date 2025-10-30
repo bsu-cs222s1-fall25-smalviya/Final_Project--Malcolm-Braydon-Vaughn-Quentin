@@ -3,7 +3,7 @@ package bsu.edu.cs222;
 public final class ApiConfig {
     private ApiConfig() {}
 
-    // Base URL for FMP; override with: -Dfmp.baseUrl=...
+    // Base URL for FMP//
     public static final String BASE_URL =
             System.getProperty("fmp.baseUrl", "https://financialmodelingprep.com/api/v3");
 

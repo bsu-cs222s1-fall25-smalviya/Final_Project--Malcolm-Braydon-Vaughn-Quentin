@@ -35,7 +35,6 @@ public final class FinanceApp {
     }
 
     private static boolean noInteractiveConsole() {
-        // When run via some Gradle/IDE setups on Windows, Console may be null.
         return System.console() == null;
     }
 
@@ -52,14 +51,30 @@ public final class FinanceApp {
     }
 
     private static void runApiFlow(Account account) throws Exception {
-        MarketApi api = ApiFactory.create(); // real HTTP if key present; else stub
+        MarketApi api = ApiFactory.create(); // live w/ fallback
         MarketService svc = new MarketService(api);
 
-        System.out.println("\nQuote AAPL:\n" + svc.quoteFor(account, "AAPL"));
-        System.out.println("\nTop gainers:\n" + svc.gainersFor(account, 3));
-        System.out.println("\nScreener NASDAQ:\n" + svc.screenerFor(account, ExchangeVariant.NASDAQ, 5));
-        System.out.println("\nSearch 'Microsoft':\n" + svc.searchFor(account, "Microsoft", 2));
+        String rawAapl = svc.quoteFor(account, "AAPL");
+        var quotesAapl = MarketParser.parseQuotes(rawAapl);
+        System.out.println("\nAAPL quote:");
+        System.out.println(MarketFormatter.formatQuotes(quotesAapl));
+
+        String rawGainers = svc.gainersFor(account, 3);
+        var quotesGainers = MarketParser.parseQuotes(rawGainers);
+        System.out.println("\nTop gainers:");
+        System.out.println(MarketFormatter.formatQuotes(quotesGainers));
+
+        String rawScreener = svc.screenerFor(account, ExchangeVariant.NASDAQ, 5);
+        var quotesScreener = MarketParser.parseQuotes(rawScreener);
+        System.out.println("\nScreener (NASDAQ):");
+        System.out.println(MarketFormatter.formatQuotes(quotesScreener));
+
+        String rawSearch = svc.searchFor(account, "Microsoft", 2);
+        var quotesSearch = MarketParser.parseQuotes(rawSearch);
+        System.out.println("\nSearch 'Microsoft':");
+        System.out.println(MarketFormatter.formatQuotes(quotesSearch));
 
         try { Account.saveAccounts(); } catch (Throwable ignored) {}
     }
+
 }
