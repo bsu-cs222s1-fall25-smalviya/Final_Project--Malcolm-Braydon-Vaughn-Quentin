@@ -14,6 +14,12 @@ tasks.withType<JavaCompile> {
     options.compilerArgs.addAll(listOf("-Xlint:all"))
 }
 
+dependencies {
+
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+}
+
+
 application {
     mainClass.set("bsu.edu.cs222.FinanceApp")
 }
@@ -22,3 +28,15 @@ application {
 tasks.named<JavaExec>("run") {
     standardInput = System.`in`
 }
+
+tasks.test {
+    useJUnitPlatform()
+
+    // Optional: nicer console output
+    testLogging {
+        events("passed", "skipped", "failed")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showStandardStreams = false
+    }
+}
+
