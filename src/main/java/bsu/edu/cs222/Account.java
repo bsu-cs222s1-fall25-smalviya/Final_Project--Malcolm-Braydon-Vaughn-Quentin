@@ -1,5 +1,6 @@
 package bsu.edu.cs222;
 
+import bsu.edu.cs222.model.Portfolio;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,6 +11,9 @@ public class Account extends User {
 
     private static final String FILE_NAME = "accounts.dat";
     private static List<Account> allAccounts = new ArrayList<>();
+
+    // --- new field ---
+    private Portfolio portfolio = new Portfolio();
 
     public Account(String userName, String password) {
         super(userName, password);
@@ -66,5 +70,22 @@ public class Account extends User {
         System.out.println("Password changed successfully.");
     }
 
-    public String getReport() { return "User: " + this.getUserName(); }
+    // --- portfolio access ---
+    public Portfolio getPortfolio() {
+        return portfolio;
+    }
+
+    public void setPortfolio(Portfolio portfolio) {
+        this.portfolio = portfolio;
+    }
+
+    // --- report ---
+    public String getReport() {
+        return "User: " + this.getUserName() + "\n" + portfolio.toString();
+    }
+
+    // Optional: helper to find all accounts (for debugging/admin use)
+    public static List<Account> getAllAccounts() {
+        return allAccounts;
+    }
 }
