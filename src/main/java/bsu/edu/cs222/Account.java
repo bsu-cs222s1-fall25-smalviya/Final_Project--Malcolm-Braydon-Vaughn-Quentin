@@ -1,6 +1,5 @@
 package bsu.edu.cs222;
 
-import bsu.edu.cs222.model.Portfolio;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;

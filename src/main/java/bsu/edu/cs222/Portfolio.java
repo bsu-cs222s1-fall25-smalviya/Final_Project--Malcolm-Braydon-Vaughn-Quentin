@@ -1,4 +1,4 @@
-package bsu.edu.cs222.model;
+package bsu.edu.cs222;
 
 import java.io.Serializable;
 import java.util.HashMap;
