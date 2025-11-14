@@ -6,21 +6,32 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.io.File; // Import File
 
-import static org.junit.Assert.*;
+// Using JUnit 5 Assertions
 import static org.junit.jupiter.api.Assertions.*;
 
 class UserTest {
-    private ConcerteUser user;
+
+    private User user; // We can still test against the User interface/abstract class
     private final InputStream standardIn = System.in;
+    private static final String TEST_FILE_NAME = "accounts.dat"; // Use the same file name
 
     @BeforeEach
     void setUp(){
-        user = new ConcerteUser("DanielFinances","PW1234");
+        // *** REVISION IS HERE ***
+        // Instead of 'new ConcreteUser(...)', we now use 'new Account(...)'
+        user = new Account("DanielFinances","PW1234");
+
+        // Clean up any old test files before each test
+        new File(TEST_FILE_NAME).delete();
     }
+
     @AfterEach
     void tearDown(){
         System.setIn(standardIn);
+        // Clean up the test file after each test
+        new File(TEST_FILE_NAME).delete();
     }
 
     @Test
@@ -59,21 +70,25 @@ class UserTest {
     @Test void automatedLogin_caseSensitivePassword_returnsFalse(){
         assertFalse(user.login("DanielFinances","pw1234"), "Login is case sensitive for password");
     }
+
     private void mockSystemIn(String input){
         ByteArrayInputStream testIn = new ByteArrayInputStream(input.getBytes());
         System.setIn(testIn);
     }
+
     @Test
     void consoleLogin_successfulLogin_returnsTrue(){
         mockSystemIn("DanielFinances\nPW1234\n");
+        // We also need to fix the logic in User.java for this to pass
         assertTrue(user.login(), "Console login successful");
     }
+
     @Test
     void consoleLogin_incorrectPassword_returnsFalse(){
-        mockSystemIn("Daniel\nWrongPassword\n");
+        mockSystemIn("DanielFinances\nWrongPassword\n");
         assertFalse(user.login(), "Console login incorrect password");
     }
-    //console login test
+
     @Test
     void consoleLogin_incorrectUserName_returnsFalse(){
         mockSystemIn("DanielF\n");
