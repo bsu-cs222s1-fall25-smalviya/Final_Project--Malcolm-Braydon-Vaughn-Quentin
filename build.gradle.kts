@@ -27,6 +27,8 @@ application {
 // <<< attach stdin so Scanner.nextLine() works when using 'gradlew run'
 tasks.named<JavaExec>("run") {
     standardInput = System.`in`
+    val key = System.getenv("FMP_API_KEY") ?: ""
+    if (key.isNotBlank()) jvmArgs("-Dfmp.apiKey=$key")
 }
 
 tasks.test {

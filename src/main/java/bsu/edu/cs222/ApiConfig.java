@@ -3,14 +3,21 @@ package bsu.edu.cs222;
 public final class ApiConfig {
     private ApiConfig() {}
 
-    // Base URL for FMP//
-    public static final String BASE_URL =
-            System.getProperty("fmp.baseUrl", "https://financialmodelingprep.com/api/v3");
+    // Stable base (no /api/v3)
+    public static final String BASE_URL = "https://financialmodelingprep.com";
 
-    // API key lookup (JVM property first, then environment)
+    // Read the API key from VM option or env.
     public static String apiKeyOrNull() {
-        String key = System.getProperty("fmp.apiKey");
-        if (key == null || key.isBlank()) key = System.getenv("FMP_API_KEY");
-        return (key == null || key.isBlank()) ? null : key;
+        String vm = System.getProperty("fmp.apiKey");
+        if (vm != null && !vm.isBlank()) return vm.trim();
+        String env = System.getenv("FMP_API_KEY");
+        if (env != null && !env.isBlank()) return env.trim();
+        return null;
+    }
+
+
+    public static String mask(String key) {
+        if (key == null || key.length() < 6) return "****";
+        return key.substring(0, 3) + "..." + key.substring(key.length() - 3);
     }
 }

@@ -1,28 +1,25 @@
 package bsu.edu.cs222;
 
-import java.io.IOException;
-import java.util.Objects;
+import bsu.edu.cs222.model.StockQuote;
+import java.util.*;
 
-/** Thin service: enforces "must have an Account", and returns raw JSON strings. */
 public final class MarketService {
     private final MarketApi api;
+    public MarketService(MarketApi api){ this.api = api; }
 
-    public MarketService(MarketApi api) { this.api = Objects.requireNonNull(api); }
-
-    private static void requireAccount(Account account) {
-        if (account == null) throw new IllegalStateException("No account loaded.");
+    public String quoteFor(Account a, String symbol) throws Exception {
+        ensure(a);
+        return api.getRawQuote(symbol);
     }
 
-    public String quoteFor(Account account, String symbol) throws IOException, InterruptedException {
-        requireAccount(account); return api.getRawQuote(symbol);
+    public String quotesForMany(Account a, List<String> symbols) throws Exception {
+        ensure(a);
+        if (symbols.isEmpty()) return "[]";
+        String joined = String.join(",", new ArrayList<>(symbols)).toUpperCase();
+        return api.getRawQuote(joined);
     }
-    public String gainersFor(Account account, int limit) throws IOException, InterruptedException {
-        requireAccount(account); return api.getRawTopGainers(limit);
-    }
-    public String screenerFor(Account account, ExchangeVariant ex, int limit) throws IOException, InterruptedException {
-        requireAccount(account); return api.getRawScreenerByExchange(ex, limit);
-    }
-    public String searchFor(Account account, String query, int limit) throws IOException, InterruptedException {
-        requireAccount(account); return api.searchRaw(query, limit);
-    }
+
+    public List<StockQuote> parseQuotes(String raw){ return MarketParser.parseQuotes(raw); }
+
+    private void ensure(Account a){ if (a == null) throw new IllegalStateException("Not logged in"); }
 }

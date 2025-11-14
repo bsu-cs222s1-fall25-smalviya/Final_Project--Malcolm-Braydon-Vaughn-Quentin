@@ -5,34 +5,26 @@ import java.util.Scanner;
 
 public abstract class User implements Serializable {
     private static final long serialVersionUID = 1L;
-
     protected String userName;
     protected String password;
 
-    public User(String userName, String password) {
-        this.userName = userName;
-        this.password = password;
-    }
+    public User(String userName, String password) { this.userName=userName; this.password=password; }
 
-    // Interactive login (not required by API layer)
     public boolean login() {
-        Scanner input = new Scanner(System.in);
+        Scanner in = new Scanner(System.in);
         System.out.print("User name: ");
-        String userNameIn = input.nextLine();
+        String u = in.nextLine();
+        if (!u.equals(this.userName)) { System.out.println("User name not found."); return false; }
         System.out.print("Password: ");
-        String passwordIn = input.nextLine();
-        return login(userNameIn, passwordIn);
+        String p = in.nextLine();
+        if (!p.equals(this.password)) { System.out.println("Incorrect password."); return false; }
+        System.out.println("Login successful!");
+        return true;
     }
 
-    // Simple credential check used by Account.loginExisting(...)
-    public boolean login(String userNameIn, String passwordIn) {
-        return userNameIn.equals(this.userName) && passwordIn.equals(this.password);
-    }
-
-    public void setUserName(String userName) { this.userName = userName; }
-    public String getUserName() { return this.userName; }
-
-    public void setPassword(String password) { this.password = password; }
-    public String getPassword() { return this.password; }
+    public boolean login(String u, String p){ return u.equals(this.userName) && p.equals(this.password); }
+    public void setUserName(String n){ this.userName=n; }
+    public String getUserName(){ return this.userName; }
+    public void setPassword(String p){ this.password=p; }
+    public String getPassword(){ return this.password; }
 }
-

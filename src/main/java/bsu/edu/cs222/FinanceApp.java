@@ -1,80 +1,119 @@
 package bsu.edu.cs222;
 
-import java.io.Console;
+import bsu.edu.cs222.model.StockQuote;
+
+import java.util.List;
 import java.util.Scanner;
 
-/** Demo main that uses your existing Account + the API service. */
 public final class FinanceApp {
+
     public static void main(String[] args) throws Exception {
+        // load accounts from disk
         Account.loadAccounts();
+        System.out.println(
+                "DEBUG key? vm=" + System.getProperty("fmp.apiKey") +
+                        " env=" + System.getenv("FMP_API_KEY")
+        );
 
-        if (noInteractiveConsole()) {
-            runNonInteractiveDemo();
-            return;
-        }
-
-        // ----- interactive mode -----
         Scanner in = new Scanner(System.in);
-        System.out.print("1) Login or 2) Create account? ");
-        int choice = Integer.parseInt(in.nextLine());
-        System.out.print("Username: ");
-        String user = in.nextLine();
-        System.out.print("Password: ");
-        String pass = in.nextLine();
 
-        Account account = (choice == 1)
+        // login or create
+        System.out.print("1) Login or 2) Create account? ");
+        int lc = readInt(in);
+        System.out.print("Username: "); String user = in.nextLine().trim();
+        System.out.print("Password: "); String pass = in.nextLine().trim();
+
+        Account account = (lc == 1)
                 ? Account.loginExisting(user, pass)
                 : Account.createAccount(user, pass);
 
-        if (account == null) {
-            System.out.println("Could not load/create account. Exiting.");
+        if (account == null) return;
+
+        // build API + services (quote-only, with fallback to stub)
+        MarketApi api = ApiFactory.createQuoteOnly();
+        MarketService market = new MarketService(api);
+        PortfolioService portfolios = new PortfolioService(market);
+
+        // main menu
+        while (true) {
+            System.out.println();
+            System.out.println(ApiDiagnostics.statusLine());
+            System.out.println("""
+                What would you like to do?
+                1) Lookup symbol and (optionally) add to portfolio
+                2) Portfolio: remove symbol
+                3) Portfolio: view (short quotes)
+                4) Exit
+                """);
+            System.out.print("Choose: ");
+            String choice = in.nextLine().trim();
+
+            switch (choice) {
+                case "1" -> lookupThenMaybeAdd(account, market, portfolios, in);
+                case "2" -> {
+                    System.out.print("Symbol to remove: ");
+                    String sym = in.nextLine().trim().toUpperCase();
+                    boolean removed = portfolios.removeSymbol(account, account.portfolio(), sym);
+                    System.out.println(removed ? "Removed." : "Not found.");
+                }
+                case "3" -> {
+                    if (account.portfolio().symbols().isEmpty()) {
+                        System.out.println("Your portfolio is empty.");
+                    } else {
+                        System.out.println("Saved symbols: " + account.portfolio().symbols());
+                        List<StockQuote> quotes = portfolios.fetchQuotes(account, account.portfolio());
+                        System.out.println(MarketFormatter.shortTable(quotes));
+                    }
+                }
+                case "4" -> {
+                    Account.saveAccounts();   // persist accounts to accounts.dat
+                    System.out.println("Goodbye!");
+                    return;
+                }
+                default -> System.out.println("Try again.");
+            }
+        }
+    }
+
+
+
+
+    private static void lookupThenMaybeAdd(
+            Account account,
+            MarketService market,
+            PortfolioService portfolios,
+            Scanner in
+    ) throws Exception {
+        System.out.print("Enter symbol (e.g., AAPL): ");
+        String sym = in.nextLine().trim().toUpperCase();
+        if (sym.isBlank()) { System.out.println("No symbol."); return; }
+
+        // live /quote call (with fallback if live fails)
+        String raw = market.quoteFor(account, sym);
+        List<StockQuote> quotes = MarketParser.parseQuotes(raw);
+
+        if (quotes.isEmpty()) {
+            System.out.println("No data for " + sym + ".");
             return;
         }
 
-        runApiFlow(account);
-    }
+        // show compact row like your screenshot
+        System.out.println(MarketFormatter.shortTable(quotes));
+        System.out.println(ApiDiagnostics.statusLine()); // shows LIVE vs STUB source
 
-    private static boolean noInteractiveConsole() {
-        return System.console() == null;
-    }
-
-    private static void runNonInteractiveDemo() throws Exception {
-        // Use a deterministic demo account so CI / non-interactive runs still work
-        String user = "demo";
-        String pass = "demo";
-        Account account = Account.loginExisting(user, pass);
-        if (account == null) {
-            account = Account.createAccount(user, pass);
+        // confirm add
+        System.out.print("Add " + sym + " to your portfolio? (y/n): ");
+        String ans = in.nextLine().trim().toLowerCase();
+        if (ans.startsWith("y")) {
+            boolean added = portfolios.addSymbol(account, account.portfolio(), sym);
+            System.out.println(added ? "Added." : "Already present.");
+        } else {
+            System.out.println("Not added.");
         }
-        System.out.println("(non-interactive) Logged in as: " + account.getUserName());
-        runApiFlow(account);
     }
 
-    private static void runApiFlow(Account account) throws Exception {
-        MarketApi api = ApiFactory.create(); // live w/ fallback
-        MarketService svc = new MarketService(api);
-
-        String rawAapl = svc.quoteFor(account, "AAPL");
-        var quotesAapl = MarketParser.parseQuotes(rawAapl);
-        System.out.println("\nAAPL quote:");
-        System.out.println(MarketFormatter.formatQuotes(quotesAapl));
-
-        String rawGainers = svc.gainersFor(account, 3);
-        var quotesGainers = MarketParser.parseQuotes(rawGainers);
-        System.out.println("\nTop gainers:");
-        System.out.println(MarketFormatter.formatQuotes(quotesGainers));
-
-        String rawScreener = svc.screenerFor(account, ExchangeVariant.NASDAQ, 5);
-        var quotesScreener = MarketParser.parseQuotes(rawScreener);
-        System.out.println("\nScreener (NASDAQ):");
-        System.out.println(MarketFormatter.formatQuotes(quotesScreener));
-
-        String rawSearch = svc.searchFor(account, "Microsoft", 2);
-        var quotesSearch = MarketParser.parseQuotes(rawSearch);
-        System.out.println("\nSearch 'Microsoft':");
-        System.out.println(MarketFormatter.formatQuotes(quotesSearch));
-
-        try { Account.saveAccounts(); } catch (Throwable ignored) {}
+    private static int readInt(Scanner in) {
+        try { return Integer.parseInt(in.nextLine().trim()); }
+        catch (Exception e) { return 0; }
     }
-
 }
