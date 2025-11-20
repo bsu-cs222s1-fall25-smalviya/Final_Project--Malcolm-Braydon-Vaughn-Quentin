@@ -6,36 +6,46 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
-public final class HttpMarketApi implements MarketApi {
-    private final String base;
-    private final String key;
-    private final Endpoint endpoint;
-    private final HttpClient http = HttpClient.newHttpClient();
+public class HttpMarketApi implements MarketApi {
 
-    public HttpMarketApi(String base, String key, Endpoint ep) {
-        this.base = base;
-        this.key = key;
-        this.endpoint = ep;
+    private final ApiConfig config;
+    private final ApiDiagnostics diagnostics;
+    private final HttpClient httpClient;
+
+    public HttpMarketApi(ApiConfig config, ApiDiagnostics diagnostics) {
+        this.config = config;
+        this.diagnostics = diagnostics;
+        this.httpClient = HttpClient.newHttpClient();
     }
 
     @Override
-    public String getRawQuote(String symbol) throws IOException, InterruptedException {
-        // Build STABLE endpoint URL (no /api/v3/)
-        String url = "https://financialmodelingprep.com"
-                + "/stable/quote-short/"
-                + symbol.toUpperCase()
-                + "?apikey=" + key;   // key must be your real key
+    public String getQuote(String symbol) throws IOException {
+        String url = config.buildQuoteUrl(symbol);
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .GET()
+                .build();
 
-        System.out.println("[HTTP] GET " + url); // debug: see exactly what we call
+        diagnostics.logRequest(url);
 
-        HttpRequest req = HttpRequest.newBuilder(URI.create(url)).GET().build();
-        HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+        try {
+            HttpResponse<String> response =
+                    httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            diagnostics.logResponse(url, response.statusCode());
 
-        if (res.statusCode() < 200 || res.statusCode() >= 300) {
-            System.out.println("[FMP ERROR] code=" + res.statusCode() + " body=" + res.body());
-            throw new IOException("HTTP " + res.statusCode() + " for " + url);
+            if (response.statusCode() != 200) {
+                throw new IOException("HTTP " + response.statusCode() + " from Alpha Vantage");
+            }
+
+            String body = response.body();
+            if (!body.contains("\"Global Quote\"")) {
+                throw new IOException("Unexpected Alpha Vantage response: " + body);
+            }
+
+            return body;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("HTTP call interrupted", e);
         }
-        return res.body();
     }
-
 }

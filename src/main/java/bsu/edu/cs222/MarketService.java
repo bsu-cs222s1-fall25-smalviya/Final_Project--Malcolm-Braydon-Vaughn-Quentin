@@ -1,25 +1,34 @@
 package bsu.edu.cs222;
 
-import bsu.edu.cs222.model.StockQuote;
-import java.util.*;
+import java.io.IOException;
 
-public final class MarketService {
+public class MarketService {
+
     private final MarketApi api;
-    public MarketService(MarketApi api){ this.api = api; }
+    private final MarketParser parser;
+    private final MarketFormatter formatter;
 
-    public String quoteFor(Account a, String symbol) throws Exception {
-        ensure(a);
-        return api.getRawQuote(symbol);
+    public MarketService(MarketApi api, MarketParser parser, MarketFormatter formatter) {
+        this.api = api;
+        this.parser = parser;
+        this.formatter = formatter;
     }
 
-    public String quotesForMany(Account a, List<String> symbols) throws Exception {
-        ensure(a);
-        if (symbols.isEmpty()) return "[]";
-        String joined = String.join(",", new ArrayList<>(symbols)).toUpperCase();
-        return api.getRawQuote(joined);
+    public String fetchAndFormatQuote(String symbol) {
+        try {
+            String json = api.getQuote(symbol);
+            StockQuote quote = parser.parse(json);
+            return formatter.format(quote);
+        } catch (IOException e) {
+            return "Error contacting market data service: " + e.getMessage();
+        } catch (RuntimeException e) {
+            return "Error parsing market data: " + e.getMessage();
+        }
     }
 
-    public List<StockQuote> parseQuotes(String raw){ return MarketParser.parseQuotes(raw); }
-
-    private void ensure(Account a){ if (a == null) throw new IllegalStateException("Not logged in"); }
+    public StockQuote fetchQuote(String symbol) throws IOException {
+        String json = api.getQuote(symbol);
+        return parser.parse(json);
+    }
 }
+

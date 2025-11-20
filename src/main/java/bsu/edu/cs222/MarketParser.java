@@ -1,45 +1,47 @@
 package bsu.edu.cs222;
 
-import bsu.edu.cs222.model.StockQuote;
-import java.util.*;
+import java.math.BigDecimal;
 
-public final class MarketParser {
-    private MarketParser(){}
+/**
+ * Very small JSON parser for Alpha Vantage GLOBAL_QUOTE responses.
+ * It does not try to be a full JSON library, it just pulls out the fields we care about.
+ */
+public class MarketParser {
 
+    public StockQuote parse(String json) {
+        String symbol = extractField(json, "01. symbol");
+        String priceStr = extractField(json, "05. price");
+        String changeStr = extractField(json, "09. change");
+        String changePercentStr = extractField(json, "10. change percent");
+        String tradingDay = extractField(json, "07. latest trading day");
 
-    public static List<StockQuote> parseQuotes(String rawJson) {
-        List<StockQuote> out = new ArrayList<>();
-        if (rawJson == null || rawJson.isBlank()) return out;
+        BigDecimal price = new BigDecimal(priceStr);
+        BigDecimal change = new BigDecimal(changeStr);
+        BigDecimal percent = new BigDecimal(
+                changePercentStr.replace("%", "").trim()
+        );
 
-        String s = rawJson.trim();
-        if (s.startsWith("[")) s = s.substring(1);
-        if (s.endsWith("]")) s = s.substring(0, s.length()-1);
-        String[] objs = s.split("\\},\\s*\\{");
+        return new StockQuote(symbol, price, change, percent, tradingDay);
+    }
 
-        for (String o : objs) {
-            String j = o.replace("{","").replace("}","");
-            String symbol = ex(j,"\"symbol\":\"","\"");
-            String name   = ex(j,"\"name\":\"","\"");
-            double price  = d(ex(j,"\"price\":",","));
-            double change = d(ex(j,"\"change\":",","));
-            double pct    = d(ex(j,"\"changesPercentage\":\"","\""));
-            long volume   = l(ex(j,"\"volume\":",","));
-            out.add(new StockQuote(symbol, name, price, change, pct, volume));
+    String extractField(String json, String key) {
+        String token = "\"" + key + "\"";
+        int keyIndex = json.indexOf(token);
+        if (keyIndex < 0) {
+            throw new IllegalArgumentException("Missing key " + key);
         }
-        return out;
-    }
 
-    private static String ex(String t, String a, String b){
-        int i=t.indexOf(a); if(i<0)return "";
-        int j=t.indexOf(b,i+a.length()); if(j<0) j=t.length();
-        return t.substring(i+a.length(), j);
-    }
-    private static double d(String v){
-        try { return Double.parseDouble(v.replace("%","").replace("\"","").replace(",","").trim()); }
-        catch(Exception e){ return 0.0; }
-    }
-    private static long l(String v){
-        try { return Long.parseLong(v.replace("\"","").replace(",","").trim()); }
-        catch(Exception e){ return 0L; }
+        int colonIndex = json.indexOf(":", keyIndex);
+        if (colonIndex < 0) {
+            throw new IllegalArgumentException("Missing ':' for key " + key);
+        }
+
+        int firstQuote = json.indexOf("\"", colonIndex + 1);
+        int secondQuote = json.indexOf("\"", firstQuote + 1);
+        if (firstQuote < 0 || secondQuote < 0) {
+            throw new IllegalArgumentException("Malformed value for key " + key);
+        }
+
+        return json.substring(firstQuote + 1, secondQuote);
     }
 }

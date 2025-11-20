@@ -1,6 +1,15 @@
 package bsu.edu.cs222;
 
 public enum Endpoint {
-    QUOTE,        // /stable/quote/{symbol}
-    QUOTE_SHORT   // /stable/quote-short/{symbol}
+    ALPHA_VANTAGE_GLOBAL_QUOTE("https://www.alphavantage.co/query");
+
+    private final String baseUrl;
+
+    Endpoint(String baseUrl) {
+        this.baseUrl = baseUrl;
+    }
+
+    public String getBaseUrl() {
+        return baseUrl;
+    }
 }

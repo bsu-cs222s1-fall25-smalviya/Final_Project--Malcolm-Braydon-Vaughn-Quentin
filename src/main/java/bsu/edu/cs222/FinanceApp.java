@@ -1,119 +1,211 @@
 package bsu.edu.cs222;
 
-import bsu.edu.cs222.model.StockQuote;
-
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Scanner;
 
-public final class FinanceApp {
+public class FinanceApp {
 
-    public static void main(String[] args) throws Exception {
-        // load accounts from disk
-        Account.loadAccounts();
-        System.out.println(
-                "DEBUG key? vm=" + System.getProperty("fmp.apiKey") +
-                        " env=" + System.getenv("FMP_API_KEY")
-        );
+    private static final String ACCOUNTS_FILE = "accounts.dat";
 
-        Scanner in = new Scanner(System.in);
+    public static void main(String[] args) {
+        MarketApi api = ApiFactory.createMarketApi();
+        MarketParser parser = new MarketParser();
+        MarketFormatter formatter = new MarketFormatter();
+        MarketService marketService = new MarketService(api, parser, formatter);
+        PortfolioService portfolioService = new PortfolioService(marketService);
 
-        // login or create
-        System.out.print("1) Login or 2) Create account? ");
-        int lc = readInt(in);
-        System.out.print("Username: "); String user = in.nextLine().trim();
-        System.out.print("Password: "); String pass = in.nextLine().trim();
+        FinanceApp app = new FinanceApp(marketService, portfolioService);
+        app.run();
+    }
 
-        Account account = (lc == 1)
-                ? Account.loginExisting(user, pass)
-                : Account.createAccount(user, pass);
+    private final MarketService marketService;
+    private final PortfolioService portfolioService;
+    private final List<Account> accounts = new ArrayList<>();
+    private final Scanner scanner = new Scanner(System.in);
 
-        if (account == null) return;
+    private Account currentAccount;
 
-        // build API + services (quote-only, with fallback to stub)
-        MarketApi api = ApiFactory.createQuoteOnly();
-        MarketService market = new MarketService(api);
-        PortfolioService portfolios = new PortfolioService(market);
+    public FinanceApp(MarketService marketService, PortfolioService portfolioService) {
+        this.marketService = marketService;
+        this.portfolioService = portfolioService;
+    }
 
-        // main menu
-        while (true) {
+    public void run() {
+        loadAccounts();
+        boolean running = true;
+        while (running) {
             System.out.println();
-            System.out.println(ApiDiagnostics.statusLine());
-            System.out.println("""
-                What would you like to do?
-                1) Lookup symbol and (optionally) add to portfolio
-                2) Portfolio: remove symbol
-                3) Portfolio: view (short quotes)
-                4) Exit
-                """);
-            System.out.print("Choose: ");
-            String choice = in.nextLine().trim();
+            System.out.println("=== Finance App ===");
+            System.out.println("1) Login");
+            System.out.println("2) Create account");
+            System.out.println("3) Exit");
+            System.out.print("Choose an option: ");
 
+            String choice = scanner.nextLine().trim();
             switch (choice) {
-                case "1" -> lookupThenMaybeAdd(account, market, portfolios, in);
-                case "2" -> {
-                    System.out.print("Symbol to remove: ");
-                    String sym = in.nextLine().trim().toUpperCase();
-                    boolean removed = portfolios.removeSymbol(account, account.portfolio(), sym);
-                    System.out.println(removed ? "Removed." : "Not found.");
-                }
-                case "3" -> {
-                    if (account.portfolio().symbols().isEmpty()) {
-                        System.out.println("Your portfolio is empty.");
-                    } else {
-                        System.out.println("Saved symbols: " + account.portfolio().symbols());
-                        List<StockQuote> quotes = portfolios.fetchQuotes(account, account.portfolio());
-                        System.out.println(MarketFormatter.shortTable(quotes));
-                    }
-                }
-                case "4" -> {
-                    Account.saveAccounts();   // persist accounts to accounts.dat
-                    System.out.println("Goodbye!");
-                    return;
-                }
-                default -> System.out.println("Try again.");
+                case "1":
+                    handleLogin();
+                    break;
+                case "2":
+                    handleCreateAccount();
+                    break;
+                case "3":
+                    running = false;
+                    break;
+                default:
+                    System.out.println("Unknown option, try again.");
+            }
+        }
+        saveAccounts();
+        System.out.println("Bye.");
+    }
+
+    private void handleLogin() {
+        System.out.print("Username: ");
+        String username = scanner.nextLine().trim();
+        Optional<Account> accountOpt = findAccount(username);
+        if (!accountOpt.isPresent()) {
+            System.out.println("No account with that username.");
+            return;
+        }
+
+        System.out.print("Password: ");
+        String password = scanner.nextLine().trim();
+        Account account = accountOpt.get();
+        if (!account.getUser().checkPassword(password)) {
+            System.out.println("Wrong password.");
+            return;
+        }
+
+        currentAccount = account;
+        System.out.println("Welcome back, " + currentAccount.getUser().getUsername() + "!");
+        userMenu();
+        currentAccount = null;
+    }
+
+    private void handleCreateAccount() {
+        System.out.print("Choose a username: ");
+        String username = scanner.nextLine().trim();
+        if (findAccount(username).isPresent()) {
+            System.out.println("That username is already taken.");
+            return;
+        }
+        System.out.print("Choose a password: ");
+        String password = scanner.nextLine().trim();
+
+        User user = new User(username, password);
+        Account account = new Account(user);
+        accounts.add(account);
+        System.out.println("Account created. You can now log in.");
+    }
+
+    private void userMenu() {
+        boolean loggedIn = true;
+        while (loggedIn) {
+            System.out.println();
+            System.out.println("=== Main Menu ===");
+            System.out.println("1) Look up a stock quote");
+            System.out.println("2) Add a holding to your portfolio");
+            System.out.println("3) View your portfolio");
+            System.out.println("4) Logout");
+            System.out.print("Choose an option: ");
+
+            String choice = scanner.nextLine().trim();
+            switch (choice) {
+                case "1":
+                    handleQuoteLookup();
+                    break;
+                case "2":
+                    handleAddHolding();
+                    break;
+                case "3":
+                    handleViewPortfolio();
+                    break;
+                case "4":
+                    loggedIn = false;
+                    break;
+                default:
+                    System.out.println("Unknown option, try again.");
             }
         }
     }
 
+    private void handleQuoteLookup() {
+        System.out.print("Enter stock symbol (e.g. AAPL): ");
+        String symbol = scanner.nextLine().trim().toUpperCase();
+        String formatted = marketService.fetchAndFormatQuote(symbol);
+        System.out.println(formatted);
+    }
 
-
-
-    private static void lookupThenMaybeAdd(
-            Account account,
-            MarketService market,
-            PortfolioService portfolios,
-            Scanner in
-    ) throws Exception {
-        System.out.print("Enter symbol (e.g., AAPL): ");
-        String sym = in.nextLine().trim().toUpperCase();
-        if (sym.isBlank()) { System.out.println("No symbol."); return; }
-
-        // live /quote call (with fallback if live fails)
-        String raw = market.quoteFor(account, sym);
-        List<StockQuote> quotes = MarketParser.parseQuotes(raw);
-
-        if (quotes.isEmpty()) {
-            System.out.println("No data for " + sym + ".");
+    private void handleAddHolding() {
+        if (currentAccount == null) {
+            System.out.println("You must be logged in.");
             return;
         }
-
-        // show compact row like your screenshot
-        System.out.println(MarketFormatter.shortTable(quotes));
-        System.out.println(ApiDiagnostics.statusLine()); // shows LIVE vs STUB source
-
-        // confirm add
-        System.out.print("Add " + sym + " to your portfolio? (y/n): ");
-        String ans = in.nextLine().trim().toLowerCase();
-        if (ans.startsWith("y")) {
-            boolean added = portfolios.addSymbol(account, account.portfolio(), sym);
-            System.out.println(added ? "Added." : "Already present.");
-        } else {
-            System.out.println("Not added.");
+        System.out.print("Enter stock symbol: ");
+        String symbol = scanner.nextLine().trim().toUpperCase();
+        System.out.print("How many shares? ");
+        String sharesInput = scanner.nextLine().trim();
+        try {
+            int shares = Integer.parseInt(sharesInput);
+            currentAccount.getPortfolio().addShares(symbol, shares);
+            System.out.println("Added " + shares + " shares of " + symbol + " to your portfolio.");
+        } catch (NumberFormatException e) {
+            System.out.println("Shares must be a whole number.");
+        } catch (IllegalArgumentException e) {
+            System.out.println(e.getMessage());
         }
     }
 
-    private static int readInt(Scanner in) {
-        try { return Integer.parseInt(in.nextLine().trim()); }
-        catch (Exception e) { return 0; }
+    private void handleViewPortfolio() {
+        if (currentAccount == null) {
+            System.out.println("You must be logged in.");
+            return;
+        }
+        portfolioService.printPortfolio(currentAccount.getPortfolio());
+    }
+
+    private Optional<Account> findAccount(String username) {
+        return accounts.stream()
+                .filter(a -> a.getUser().getUsername().equalsIgnoreCase(username))
+                .findFirst();
+    }
+
+    private void loadAccounts() {
+        File file = new File(ACCOUNTS_FILE);
+        if (!file.exists()) {
+            return;
+        }
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                try {
+                    Account account = Account.fromLine(line);
+                    accounts.add(account);
+                } catch (IllegalArgumentException e) {
+                    System.err.println("Skipping bad account line: " + line);
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Could not read " + ACCOUNTS_FILE + ": " + e.getMessage());
+        }
+    }
+
+    private void saveAccounts() {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(ACCOUNTS_FILE))) {
+            for (Account account : accounts) {
+                writer.println(account.serialize());
+            }
+        } catch (IOException e) {
+            System.err.println("Could not write " + ACCOUNTS_FILE + ": " + e.getMessage());
+        }
     }
 }

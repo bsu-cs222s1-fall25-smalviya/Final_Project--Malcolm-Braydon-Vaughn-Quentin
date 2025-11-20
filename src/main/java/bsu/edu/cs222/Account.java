@@ -1,48 +1,55 @@
 package bsu.edu.cs222;
 
-import java.io.*;
-import java.util.*;
-import bsu.edu.cs222.model.Portfolio;
+import java.util.Objects;
 
-public class Account extends User {
-    private static final long serialVersionUID = 1L;
-    private static final String FILE_NAME = "accounts.dat";
-    private static List<Account> allAccounts = new ArrayList<>();
+public class Account {
 
-    private final Portfolio portfolio = new Portfolio();
-    public Account(String user, String pass){ super(user, pass); }
-    public Portfolio portfolio(){ return portfolio; }
+    private final User user;
+    private final Portfolio portfolio;
 
-    public static Account createAccount(String u, String p) {
-        Account a = new Account(u,p);
-        allAccounts.add(a);
-        saveAccounts();
-        System.out.println("Account created successfully!");
-        return a;
+    public Account(User user) {
+        this.user = user;
+        this.portfolio = new Portfolio(user.getUsername());
     }
 
-    @SuppressWarnings("unchecked")
-    public static void loadAccounts() {
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(FILE_NAME))) {
-            allAccounts = (List<Account>) ois.readObject();
-        } catch (FileNotFoundException e) {
-            System.out.println("No existing accounts found, creating new list...");
-            allAccounts = new ArrayList<>();
-        } catch (Exception e) { e.printStackTrace(); }
+    public User getUser() {
+        return user;
     }
 
-    public static void saveAccounts() {
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(FILE_NAME))) {
-            oos.writeObject(allAccounts);
-        } catch (IOException e) { e.printStackTrace(); }
+    public Portfolio getPortfolio() {
+        return portfolio;
     }
 
-    public static Account loginExisting(String u, String p) {
-        for (Account a : allAccounts) if (a.login(u,p)) {
-            System.out.println("Welcome back, " + a.getUserName() + "!");
-            return a;
+    /**
+     * Serialize this account to a simple line: username|password
+     * This is what we store in accounts.dat.
+     */
+    public String serialize() {
+        return user.getUsername() + "|" + user.getPassword();
+    }
+
+    public static Account fromLine(String line) {
+        if (line == null || line.isBlank()) {
+            throw new IllegalArgumentException("Line is empty");
         }
-        System.out.println("Invalid login. Please try again.");
-        return null;
+        String[] parts = line.split("\\|");
+        if (parts.length < 2) {
+            throw new IllegalArgumentException("Line must be username|password");
+        }
+        User user = new User(parts[0].trim(), parts[1].trim());
+        return new Account(user);
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Account)) return false;
+        Account that = (Account) other;
+        return Objects.equals(user.getUsername(), that.user.getUsername());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(user.getUsername());
     }
 }

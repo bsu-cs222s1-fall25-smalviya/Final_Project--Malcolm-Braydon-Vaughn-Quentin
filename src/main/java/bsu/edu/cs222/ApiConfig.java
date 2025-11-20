@@ -1,23 +1,46 @@
 package bsu.edu.cs222;
 
-public final class ApiConfig {
-    private ApiConfig() {}
+public class ApiConfig {
 
-    // Stable base (no /api/v3)
-    public static final String BASE_URL = "https://financialmodelingprep.com";
+    // Your Alpha Vantage key as a fallback so the app runs without extra setup.
+    private static final String FALLBACK_KEY = "6ZBZI06NT3BXTW03";
 
-    // Read the API key from VM option or env.
-    public static String apiKeyOrNull() {
-        String vm = System.getProperty("fmp.apiKey");
-        if (vm != null && !vm.isBlank()) return vm.trim();
-        String env = System.getenv("FMP_API_KEY");
-        if (env != null && !env.isBlank()) return env.trim();
-        return null;
+    private final String apiKey;
+    private final Endpoint quoteEndpoint;
+
+    public ApiConfig(String apiKey, Endpoint quoteEndpoint) {
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalArgumentException("API key is required");
+        }
+        this.apiKey = apiKey;
+        this.quoteEndpoint = quoteEndpoint;
     }
 
+    public static ApiConfig fromEnv() {
+        String key = System.getenv("ALPHAVANTAGE_API_KEY");
+        if (key == null || key.isBlank()) {
+            System.out.println("[API] ALPHAVANTAGE_API_KEY not set, using built in key.");
+            key = FALLBACK_KEY;
+        }
+        return new ApiConfig(key, Endpoint.ALPHA_VANTAGE_GLOBAL_QUOTE);
+    }
 
-    public static String mask(String key) {
-        if (key == null || key.length() < 6) return "****";
-        return key.substring(0, 3) + "..." + key.substring(key.length() - 3);
+    public String getApiKey() {
+        return apiKey;
+    }
+
+    public Endpoint getQuoteEndpoint() {
+        return quoteEndpoint;
+    }
+
+    /**
+     * Build the full quote URL for a given symbol using Alpha Vantage GLOBAL_QUOTE.
+     */
+    public String buildQuoteUrl(String symbol) {
+        String base = quoteEndpoint.getBaseUrl();
+        return base
+                + "?function=GLOBAL_QUOTE"
+                + "&symbol=" + symbol
+                + "&apikey=" + apiKey;
     }
 }

@@ -1,3 +1,5 @@
 package bsu.edu.cs222;
 
-public enum ExchangeVariant { NYSE, NASDAQ, AMEX, EURONEXT, TSX }
+public enum ExchangeVariant {
+    ALPHA_VANTAGE_LIVE
+}

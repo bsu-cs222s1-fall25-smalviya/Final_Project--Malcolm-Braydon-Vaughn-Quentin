@@ -2,26 +2,23 @@ package bsu.edu.cs222;
 
 import java.io.IOException;
 
-public final class LiveWithDemoFallbackMarketApi implements MarketApi {
-    private final HttpMarketApi live;
-    private final HttpMarketApi demo; // may be null
+public class LiveWithDemoFallbackMarketApi implements MarketApi {
 
-    public LiveWithDemoFallbackMarketApi(HttpMarketApi live, HttpMarketApi demo) {
-        this.live = live;
-        this.demo = demo;
+    private final MarketApi liveApi;
+    private final MarketApi fallbackApi;
+
+    public LiveWithDemoFallbackMarketApi(MarketApi liveApi, MarketApi fallbackApi) {
+        this.liveApi = liveApi;
+        this.fallbackApi = fallbackApi;
     }
 
     @Override
-    public String getRawQuote(String symbolsCsv) throws Exception {
+    public String getQuote(String symbol) throws IOException {
         try {
-            return live.getRawQuote(symbolsCsv);
+            return liveApi.getQuote(symbol);
         } catch (IOException e) {
-            String msg = e.getMessage() == null ? "" : e.getMessage();
-            if ((msg.contains("HTTP 401") || msg.contains("HTTP 403")) && demo != null) {
-                System.out.println("[API] 401/403 from primary key, retrying with DEMO...");
-                return demo.getRawQuote(symbolsCsv);
-            }
-            throw e;
+            System.err.println("Live API failed, using stub data: " + e.getMessage());
+            return fallbackApi.getQuote(symbol);
         }
     }
 }

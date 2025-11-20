@@ -1,6 +1,12 @@
 package bsu.edu.cs222;
 
+import java.io.IOException;
+
+/**
+ * Simple abstraction over the market data provider.
+ * Returns raw JSON for a single symbol.
+ */
 public interface MarketApi {
-    // /api/v3/quote/AAPL or /api/v3/quote/AAPL,MSFT
-    String getRawQuote(String symbolsCsv) throws Exception;
+
+    String getQuote(String symbol) throws IOException;
 }
