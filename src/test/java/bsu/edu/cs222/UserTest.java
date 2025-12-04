@@ -19,7 +19,7 @@ class UserTest {
 
     @BeforeEach
     void setUp(){
-        // *** REVISION IS HERE ***
+
         // Instead of 'new ConcreteUser(...)', we now use 'new Account(...)'
         user = new Account("DanielFinances","PW1234");
 
