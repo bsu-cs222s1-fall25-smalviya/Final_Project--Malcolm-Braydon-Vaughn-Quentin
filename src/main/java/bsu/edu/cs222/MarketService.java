@@ -30,5 +30,24 @@ public class MarketService {
         String json = api.getQuote(symbol);
         return parser.parse(json);
     }
-}
 
+    public String fetchAndFormatHistory(String symbol, int days) {
+        try {
+            String json = api.getDailySeries(symbol);
+            PriceHistory history = parser.parseDailySeries(symbol, json, days);
+            return formatter.formatHistory(history);
+        } catch (IOException e) {
+            return "Error contacting market data service: " + e.getMessage();
+        } catch (RuntimeException e) {
+            return "Error parsing historical data: " + e.getMessage();
+        }
+    }
+
+
+     //New: fetch the raw PriceHistory object (for graphs).
+
+    public PriceHistory fetchHistory(String symbol, int days) throws IOException {
+        String json = api.getDailySeries(symbol);
+        return parser.parseDailySeries(symbol, json, days);
+    }
+}

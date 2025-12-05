@@ -21,6 +21,16 @@ public class HttpMarketApi implements MarketApi {
     @Override
     public String getQuote(String symbol) throws IOException {
         String url = config.buildQuoteUrl(symbol);
+        return sendRequest(url, "\"Global Quote\"");
+    }
+
+    @Override
+    public String getDailySeries(String symbol) throws IOException {
+        String url = config.buildDailySeriesUrl(symbol);
+        return sendRequest(url, "\"Time Series (Daily)\"");
+    }
+
+    private String sendRequest(String url, String expectedKey) throws IOException {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .GET()
@@ -31,6 +41,7 @@ public class HttpMarketApi implements MarketApi {
         try {
             HttpResponse<String> response =
                     httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
             diagnostics.logResponse(url, response.statusCode());
 
             if (response.statusCode() != 200) {
@@ -38,7 +49,7 @@ public class HttpMarketApi implements MarketApi {
             }
 
             String body = response.body();
-            if (!body.contains("\"Global Quote\"")) {
+            if (!body.contains(expectedKey)) {
                 throw new IOException("Unexpected Alpha Vantage response: " + body);
             }
 

@@ -1,39 +1,60 @@
 package bsu.edu.cs222;
 
-import bsu.edu.cs222.model.StockQuote;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-final class MarketFormatterTest {
+class MarketFormatterTest {
 
     @Test
-    void formatQuotes_truncatesLongName_andFormatsNumbers() {
-        String longName = "Very very long company name that exceeds thirty characters";
-        // MAX_NAME_WIDTH is 30 → expected truncated to first 27 + "..."
-        String expectedTruncated = longName.substring(0, 27) + "...";
-
-        List<StockQuote> quotes = List.of(
-                new StockQuote("LONG", longName, 123.4, -2.5, 1.234)
+    void format_includesSymbolAndPrice() {
+        // Match your actual StockQuote constructor:
+        // StockQuote(String symbol,
+        //            BigDecimal price,
+        //            BigDecimal previousClose,
+        //            BigDecimal change,
+        //            String changePercent)
+        StockQuote quote = new StockQuote(
+                "AAPL",
+                new BigDecimal("150.25"),
+                new BigDecimal("149.00"),
+                new BigDecimal("1.25"),
+                "0.84"
         );
 
-        String table = MarketFormatter.formatQuotes(quotes);
+        MarketFormatter formatter = new MarketFormatter();
 
-        // Header present
-        assertTrue(table.contains("SYMBOL"));
-        assertTrue(table.contains("NAME"));
-        assertTrue(table.contains("PRICE"));
-        assertTrue(table.contains("CHANGE"));
-        assertTrue(table.contains("% CHANGE"));
+        String text = formatter.format(quote);
 
-        // Truncated name appears
-        assertTrue(table.contains(expectedTruncated));
+        assertTrue(text.contains("AAPL"),
+                "Formatted quote should contain the symbol");
+        assertTrue(text.contains("150.25"),
+                "Formatted quote should contain the price");
+    }
 
-        // Two decimal places on numbers
-        assertTrue(table.contains("123.40")); // price
-        assertTrue(table.contains("-2.50"));  // change
-        assertTrue(table.contains("1.23"));   // % change
+    @Test
+    void formatHistory_includesSymbolAndDates() {
+        // Match your current DailyPrice constructor:
+        // DailyPrice(String dateIso, BigDecimal close)
+        DailyPrice d1 = new DailyPrice("2024-12-04",
+                new BigDecimal("101.00"));
+        DailyPrice d2 = new DailyPrice("2024-12-03",
+                new BigDecimal("100.00"));
+
+        PriceHistory history = new PriceHistory("IBM", List.of(d1, d2));
+
+        MarketFormatter formatter = new MarketFormatter();
+
+        String text = formatter.formatHistory(history);
+
+        assertTrue(text.contains("IBM"),
+                "History output should include the symbol");
+        assertTrue(text.contains("2024-12-04"),
+                "History output should include the first date");
+        assertTrue(text.contains("2024-12-03"),
+                "History output should include the second date");
     }
 }

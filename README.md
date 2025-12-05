@@ -12,6 +12,6 @@ Portfolio Tracking: Users can enter tickers + numbers of shares to moniter portf
 
 Price History & Trends: View stock price charts with moving averages, highs/lows, and daily volume.
 
-GUI: JavaFX interface is used.
+GUI: java Swing with graphing for 5 day stock quote. 
 
 Project Summary: This program will be a stock market data app that has a few different key features that help the user buy and learn about stocks in the market.

@@ -68,6 +68,8 @@ public class FinanceApp {
         System.out.println("Bye.");
     }
 
+    // ---------- Login / account management ----------
+
     private void handleLogin() {
         System.out.print("Username: ");
         String username = scanner.nextLine().trim();
@@ -107,72 +109,6 @@ public class FinanceApp {
         System.out.println("Account created. You can now log in.");
     }
 
-    private void userMenu() {
-        boolean loggedIn = true;
-        while (loggedIn) {
-            System.out.println();
-            System.out.println("=== Main Menu ===");
-            System.out.println("1) Look up a stock quote");
-            System.out.println("2) Add a holding to your portfolio");
-            System.out.println("3) View your portfolio");
-            System.out.println("4) Logout");
-            System.out.print("Choose an option: ");
-
-            String choice = scanner.nextLine().trim();
-            switch (choice) {
-                case "1":
-                    handleQuoteLookup();
-                    break;
-                case "2":
-                    handleAddHolding();
-                    break;
-                case "3":
-                    handleViewPortfolio();
-                    break;
-                case "4":
-                    loggedIn = false;
-                    break;
-                default:
-                    System.out.println("Unknown option, try again.");
-            }
-        }
-    }
-
-    private void handleQuoteLookup() {
-        System.out.print("Enter stock symbol (e.g. AAPL): ");
-        String symbol = scanner.nextLine().trim().toUpperCase();
-        String formatted = marketService.fetchAndFormatQuote(symbol);
-        System.out.println(formatted);
-    }
-
-    private void handleAddHolding() {
-        if (currentAccount == null) {
-            System.out.println("You must be logged in.");
-            return;
-        }
-        System.out.print("Enter stock symbol: ");
-        String symbol = scanner.nextLine().trim().toUpperCase();
-        System.out.print("How many shares? ");
-        String sharesInput = scanner.nextLine().trim();
-        try {
-            int shares = Integer.parseInt(sharesInput);
-            currentAccount.getPortfolio().addShares(symbol, shares);
-            System.out.println("Added " + shares + " shares of " + symbol + " to your portfolio.");
-        } catch (NumberFormatException e) {
-            System.out.println("Shares must be a whole number.");
-        } catch (IllegalArgumentException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
-    private void handleViewPortfolio() {
-        if (currentAccount == null) {
-            System.out.println("You must be logged in.");
-            return;
-        }
-        portfolioService.printPortfolio(currentAccount.getPortfolio());
-    }
-
     private Optional<Account> findAccount(String username) {
         return accounts.stream()
                 .filter(a -> a.getUser().getUsername().equalsIgnoreCase(username))
@@ -207,5 +143,125 @@ public class FinanceApp {
         } catch (IOException e) {
             System.err.println("Could not write " + ACCOUNTS_FILE + ": " + e.getMessage());
         }
+    }
+
+    // ---------- Logged-in menus ----------
+
+    private void userMenu() {
+        boolean loggedIn = true;
+        while (loggedIn) {
+            System.out.println();
+            System.out.println("=== Main Menu ===");
+            System.out.println("1) Stock search and tools");
+            System.out.println("2) View your portfolio");
+            System.out.println("3) Logout");
+            System.out.print("Choose an option: ");
+
+            String choice = scanner.nextLine().trim();
+            switch (choice) {
+                case "1":
+                    handleStockWorkspace();
+                    break;
+                case "2":
+                    handleViewPortfolio();
+                    break;
+                case "3":
+                    loggedIn = false;
+                    break;
+                default:
+                    System.out.println("Unknown option, try again.");
+            }
+        }
+    }
+
+    /**
+     * "Stock workspace" that behaves like:
+     * - a search bar (enter symbol)
+     * - with buttons (menu choices) for actions on that symbol.
+     */
+    private void handleStockWorkspace() {
+        if (currentAccount == null) {
+            System.out.println("You must be logged in.");
+            return;
+        }
+
+        String currentSymbol = null;
+        boolean inWorkspace = true;
+
+        while (inWorkspace) {
+            if (currentSymbol == null) {
+                System.out.print("Enter a stock symbol to work with (or press Enter to go back): ");
+                String input = scanner.nextLine().trim().toUpperCase();
+                if (input.isEmpty()) {
+                    return; // back to main menu
+                }
+                currentSymbol = input;
+            }
+
+            System.out.println();
+            System.out.println("=== Stock tools for " + currentSymbol + " ===");
+            System.out.println("1) Get live quote");
+            System.out.println("2) View 5-day price history");
+            System.out.println("3) Add shares to your portfolio");
+            System.out.println("4) Change symbol (new search)");
+            System.out.println("5) Back to main menu");
+            System.out.print("Choose an option: ");
+
+            String choice = scanner.nextLine().trim();
+            switch (choice) {
+                case "1":
+                    handleQuoteLookup(currentSymbol);
+                    break;
+                case "2":
+                    handleViewHistory(currentSymbol);
+                    break;
+                case "3":
+                    handleAddHolding(currentSymbol);
+                    break;
+                case "4":
+                    currentSymbol = null; // ask for a new symbol
+                    break;
+                case "5":
+                    inWorkspace = false;
+                    break;
+                default:
+                    System.out.println("Unknown option, try again.");
+            }
+        }
+    }
+
+    // ---------- Individual actions ----------
+
+    private void handleQuoteLookup(String symbol) {
+        String formatted = marketService.fetchAndFormatQuote(symbol);
+        System.out.println(formatted);
+    }
+
+    private void handleViewHistory(String symbol) {
+        int days = 5;
+        String summary = marketService.fetchAndFormatHistory(symbol, days);
+        System.out.println(summary);
+    }
+
+    private void handleAddHolding(String symbol) {
+        System.out.print("How many shares of " + symbol + "? ");
+        String sharesInput = scanner.nextLine().trim();
+        try {
+            int shares = Integer.parseInt(sharesInput);
+            currentAccount.getPortfolio().addShares(symbol, shares);
+            System.out.println("Added " + shares + " shares of " + symbol + " to your portfolio.");
+        } catch (NumberFormatException e) {
+            System.out.println("Shares must be a whole number.");
+        } catch (IllegalArgumentException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    private void handleViewPortfolio() {
+        if (currentAccount == null) {
+            System.out.println("You must be logged in.");
+            return;
+        }
+        portfolioService.printPortfolio(currentAccount.getPortfolio());
     }
 }

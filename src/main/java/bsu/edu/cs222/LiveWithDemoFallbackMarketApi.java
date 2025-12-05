@@ -17,8 +17,18 @@ public class LiveWithDemoFallbackMarketApi implements MarketApi {
         try {
             return liveApi.getQuote(symbol);
         } catch (IOException e) {
-            System.err.println("Live API failed, using stub data: " + e.getMessage());
+            System.err.println("Live API failed for quote, using stub data: " + e.getMessage());
             return fallbackApi.getQuote(symbol);
+        }
+    }
+
+    @Override
+    public String getDailySeries(String symbol) throws IOException {
+        try {
+            return liveApi.getDailySeries(symbol);
+        } catch (IOException e) {
+            System.err.println("Live API failed for history, using stub data: " + e.getMessage());
+            return fallbackApi.getDailySeries(symbol);
         }
     }
 }

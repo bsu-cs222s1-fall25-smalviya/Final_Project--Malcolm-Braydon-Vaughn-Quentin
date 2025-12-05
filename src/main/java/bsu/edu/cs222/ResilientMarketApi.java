@@ -14,10 +14,23 @@ public class ResilientMarketApi implements MarketApi {
 
     @Override
     public String getQuote(String symbol) throws IOException {
+        return withRetries(symbol, true);
+    }
+
+    @Override
+    public String getDailySeries(String symbol) throws IOException {
+        return withRetries(symbol, false);
+    }
+
+    private String withRetries(String symbol, boolean quote) throws IOException {
         IOException last = null;
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
-                return delegate.getQuote(symbol);
+                if (quote) {
+                    return delegate.getQuote(symbol);
+                } else {
+                    return delegate.getDailySeries(symbol);
+                }
             } catch (IOException e) {
                 last = e;
                 System.err.println("API attempt " + attempt + " failed: " + e.getMessage());

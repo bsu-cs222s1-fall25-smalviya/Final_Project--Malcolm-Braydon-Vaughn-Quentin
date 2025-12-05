@@ -1,44 +1,35 @@
 plugins {
-    java
     application
+    java
 }
 
-repositories { mavenCentral() }
+group = "bsu.edu.cs222"
+version = "1.0"
 
-java {
-    toolchain { languageVersion.set(JavaLanguageVersion.of(23)) }
-}
-
-tasks.withType<JavaCompile> {
-    options.encoding = "UTF-8"
-    options.compilerArgs.addAll(listOf("-Xlint:all"))
+repositories {
+    mavenCentral()
 }
 
 dependencies {
+    // JUnit 5 for your iteration 3 test cases
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
 
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    // If you use any JSON parsing, you may need something like this:
+    // implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
 }
 
-
 application {
+    // DEFAULT MAIN CLASS = Console version
+    // Switch this to "bsu.edu.cs222.FinanceGuiApp" if you want the GUI to run by default.
     mainClass.set("bsu.edu.cs222.FinanceApp")
 }
 
-// <<< attach stdin so Scanner.nextLine() works when using 'gradlew run'
-tasks.named<JavaExec>("run") {
-    standardInput = System.`in`
-    val key = System.getenv("FMP_API_KEY") ?: ""
-    if (key.isNotBlank()) jvmArgs("-Dfmp.apiKey=$key")
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(17)) // Java 17 recommended
+    }
 }
 
 tasks.test {
     useJUnitPlatform()
-
-    // Optional: nicer console output
-    testLogging {
-        events("passed", "skipped", "failed")
-        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
-        showStandardStreams = false
-    }
 }
-

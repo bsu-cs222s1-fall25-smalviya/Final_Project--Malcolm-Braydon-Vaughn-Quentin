@@ -20,10 +20,7 @@ public class Account {
         return portfolio;
     }
 
-    /**
-     * Serialize this account to a simple line: username|password
-     * This is what we store in accounts.dat.
-     */
+
     public String serialize() {
         return user.getUsername() + "|" + user.getPassword();
     }

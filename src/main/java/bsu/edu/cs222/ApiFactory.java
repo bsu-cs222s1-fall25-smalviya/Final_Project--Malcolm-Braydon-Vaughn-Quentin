@@ -1,24 +1,21 @@
 package bsu.edu.cs222;
 
-public class ApiFactory {
+public final class ApiFactory {
 
-    private ApiFactory() {
-        // utility class
-    }
+    private ApiFactory() { }
 
-    /**
-     * Build the full MarketApi stack:
-     * HttpMarketApi (Alpha Vantage) wrapped in ResilientMarketApi
-     * and with a stub fallback if the live calls fail.
-     */
-    public static MarketApi createMarketApi() {
-        ApiConfig config = ApiConfig.fromEnv();
+    public static MarketApi createMarketApi(String apiKey) {
+        ApiConfig config = ApiConfig.fromUserInput(apiKey);
         ApiDiagnostics diagnostics = new ApiDiagnostics();
 
-        MarketApi httpApi = new HttpMarketApi(config, diagnostics);
-        MarketApi resilient = new ResilientMarketApi(httpApi, 2);
-        MarketApi stub = new FmpMarketApiStub(); // now acts as a local Alpha Vantage style stub
+        MarketApi http = new HttpMarketApi(config, diagnostics);
+        MarketApi resilient = new ResilientMarketApi(http, 2);
+        MarketApi stub = new FmpMarketApiStub();
 
         return new LiveWithDemoFallbackMarketApi(resilient, stub);
+    }
+
+    public static MarketApi createMarketApi() {
+        return createMarketApi(null);
     }
 }

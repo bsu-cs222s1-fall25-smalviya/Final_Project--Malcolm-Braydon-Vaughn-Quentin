@@ -1,7 +1,8 @@
 package bsu.edu.cs222;
 
 public enum Endpoint {
-    ALPHA_VANTAGE_GLOBAL_QUOTE("https://www.alphavantage.co/query");
+
+    ALPHA_VANTAGE("https://www.alphavantage.co/query");
 
     private final String baseUrl;
 
